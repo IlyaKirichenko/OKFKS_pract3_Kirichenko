@@ -1,10 +1,20 @@
-namespace CinemaTicketSystemTests  
+namespace CinemaTicketSystemTests
 {
+    using System;
     using Xunit;
     using CinemaTicketSystem;
+
     public class TicketPriceCalculatorTests
     {
         private readonly ITicketPriceCalculator calculator = new TicketPriceCalculator();
+
+        private const double BasePrice = 300;
+        private const double TeenagerDiscount = 0.4;      // 40% для 6-17 лет
+        private const double PensionerDiscount = 0.5;   // 50% для 65+
+        private const double StudentDiscount = 0.2;     // 20% для 18-25
+        private const double MorningDiscount = 0.15;    // 15% до 12:00
+        private const double WednesdayDiscount = 0.3;   // 30% по средам
+        private const double VipMultiplier = 2;         // удвоение для VIP
 
         [Theory]
         [InlineData(1)]
@@ -24,7 +34,6 @@ namespace CinemaTicketSystemTests
             Assert.Equal(0, price);
         }
 
-
         [Theory]
         [InlineData(26)]
         [InlineData(46)]
@@ -40,8 +49,9 @@ namespace CinemaTicketSystemTests
                 SessionTime = new TimeSpan(15, 0, 0)
             };
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(300, price);
+            Assert.Equal(BasePrice, (double)price);
         }
+
         [Theory]
         [InlineData(6)]
         [InlineData(17)]
@@ -55,9 +65,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Monday,
                 SessionTime = new TimeSpan(15, 0, 0)
             };
+            double expected = BasePrice * (1 - TeenagerDiscount); // 300 * 0.6 = 180
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(180, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Theory]
         [InlineData(65)]
         [InlineData(95)]
@@ -71,9 +83,28 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Monday,
                 SessionTime = new TimeSpan(15, 0, 0)
             };
+            double expected = BasePrice * (1 - PensionerDiscount); // 300 * 0.5 = 150
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(150, price);
+            Assert.Equal(expected, (double)price);
         }
+
+        [Theory]
+        [InlineData(10)]
+        public void CalculatePrice_ChildWithStudentFlag(int age)
+        {
+            var request = new TicketRequest
+            {
+                Age = age,
+                IsStudent = true,
+                IsVip = false,
+                Day = DayOfWeek.Monday,
+                SessionTime = new TimeSpan(15, 0, 0)
+            };
+            double expected = BasePrice * (1 - TeenagerDiscount); // 300 * 0.6 = 180
+            var price = calculator.CalculatePrice(request);
+            Assert.Equal(expected, (double)price);
+        }
+
         [Theory]
         [InlineData(18)]
         [InlineData(20)]
@@ -88,9 +119,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Monday,
                 SessionTime = new TimeSpan(15, 0, 0)
             };
+            double expected = BasePrice * (1 - StudentDiscount); // 300 * 0.8 = 240
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(240, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Fact]
         public void CalculatePrice_SaleFor18Age_NotStudent()
         {
@@ -103,8 +136,9 @@ namespace CinemaTicketSystemTests
                 SessionTime = new TimeSpan(15, 0, 0)
             };
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(300, price);
+            Assert.Equal(BasePrice, (double)price);
         }
+
         [Theory]
         [InlineData(26)]
         public void CalculatePrice_SaleForStudents_BorderSale_26Age(int age)
@@ -118,8 +152,9 @@ namespace CinemaTicketSystemTests
                 SessionTime = new TimeSpan(15, 0, 0)
             };
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(300, price);
+            Assert.Equal(BasePrice, (double)price);
         }
+
         [Theory]
         [InlineData(17)]
         public void CalculatePrice_SaleForStudents_BorderSale_17Age(int age)
@@ -132,8 +167,9 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Monday,
                 SessionTime = new TimeSpan(15, 0, 0)
             };
+            double expected = BasePrice * (1 - WednesdayDiscount); // 300 * 0.7 = 210
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(210, price);
+            Assert.Equal(expected, (double)price);
         }
 
         [Fact]
@@ -147,9 +183,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Monday,
                 SessionTime = new TimeSpan(11, 0, 0)
             };
+            double expected = BasePrice * (1 - MorningDiscount); // 300 * 0.85 = 255
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(255, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Fact]
         public void CalculatePrice_SaleInWednesday()
         {
@@ -161,9 +199,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Wednesday,
                 SessionTime = new TimeSpan(14, 0, 0)
             };
+            double expected = BasePrice * (1 - WednesdayDiscount); // 300 * 0.7 = 210
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(210, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Fact]
         public void CalculatePrice_VIPSale()
         {
@@ -175,9 +215,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Monday,
                 SessionTime = new TimeSpan(14, 0, 0)
             };
+            double expected = BasePrice * VipMultiplier; // 300 * 2 = 600
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(600, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Fact]
         public void CalculatePrice_VIPSale_With_Student()
         {
@@ -189,9 +231,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Monday,
                 SessionTime = new TimeSpan(14, 0, 0)
             };
+            double expected = BasePrice * (1 - StudentDiscount) * VipMultiplier; // 300 * 0.8 * 2 = 480
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(480, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Fact]
         public void CalculatePrice_VIPSale_With_Student_Wednesday()
         {
@@ -203,9 +247,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Wednesday,
                 SessionTime = new TimeSpan(14, 0, 0)
             };
+            double expected = BasePrice * (1 - WednesdayDiscount) * VipMultiplier; // 300 * 0.7 * 2 = 420
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(420, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Fact]
         public void CalculatePrice_MaxSale()
         {
@@ -217,9 +263,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Wednesday,
                 SessionTime = new TimeSpan(10, 0, 0)
             };
+            double expected = BasePrice * (1 - WednesdayDiscount); // 300 * 0.7 = 210
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(210, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Theory]
         [InlineData(18)]
         [InlineData(20)]
@@ -234,9 +282,11 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Wednesday,
                 SessionTime = new TimeSpan(10, 0, 0)
             };
+            double expected = BasePrice * (1 - WednesdayDiscount); // 300 * 0.7 = 210
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(210, price);
+            Assert.Equal(expected, (double)price);
         }
+
         [Theory]
         [InlineData(0)]
         public void CalculatePrice_BorderPrice_ZeroAge(int age)
@@ -252,8 +302,7 @@ namespace CinemaTicketSystemTests
             var price = calculator.CalculatePrice(request);
             Assert.Equal(0, price);
         }
-      
-       
+
         [Fact]
         public void CalculatePrice_BorderSale_At18Age()
         {
@@ -264,8 +313,9 @@ namespace CinemaTicketSystemTests
                 Day = DayOfWeek.Wednesday,
                 SessionTime = new TimeSpan(10, 0, 0)
             };
+            double expected = BasePrice * (1 - WednesdayDiscount); // 300 * 0.7 = 210
             var price = calculator.CalculatePrice(request);
-            Assert.Equal(210, price);
+            Assert.Equal(expected, (double)price);
         }
 
         [Theory]
@@ -284,6 +334,7 @@ namespace CinemaTicketSystemTests
             };
             Assert.Throws<ArgumentOutOfRangeException>(() => calculator.CalculatePrice(request));
         }
+
         [Theory]
         [InlineData(-1)]
         [InlineData(-15)]
@@ -300,11 +351,11 @@ namespace CinemaTicketSystemTests
             };
             Assert.Throws<ArgumentOutOfRangeException>(() => calculator.CalculatePrice(request));
         }
+
         [Fact]
         public void CalculatePrice_ArgumentNullException()
         {
             TicketRequest request = null;
-
             Assert.Throws<ArgumentNullException>(() => calculator.CalculatePrice(request));
         }
     }
